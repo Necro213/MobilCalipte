@@ -1,6 +1,10 @@
-import { Component, ViewChild, ElementRef } from '@angular/core';
-import { IonicPage, NavController, NavParams } from 'ionic-angular';
-import { Geolocation } from '@ionic-native/geolocation';
+import { Component, ViewChild, ElementRef, NgZone } from '@angular/core';
+import { IonicPage, NavController, NavParams,ToastController } from 'ionic-angular';
+import { BackgroundGeolocation } from '@ionic-native/background-geolocation';
+import { Geolocation, Geoposition } from '@ionic-native/geolocation';
+import { Http } from '@angular/http';
+//import { Toast } from 'ionic-angular/components/toast/toast';
+import { BackgroundMode } from '@ionic-native/background-mode';
 
 /**
  * Generated class for the ViajePage page.
@@ -21,11 +25,14 @@ export class ViajePage {
   directionsService: any;
   directionsDisplay: any;
   bounds: any;
-  wayPoints: any[]=[{
-    location: { lat: 21.490855, lng: -104.878304 },
-    stopover: true,
-  }];
-  constructor(public navCtrl: NavController, public navParams: NavParams, private geolocation: Geolocation) {
+  endLocation: any;
+  waypoints: any = [];
+  mapa: any;
+  gps: any;
+
+  constructor(public navCtrl: NavController, public navParams: NavParams, private geolocation: Geolocation,
+        private http: Http,private toastCtrl: ToastController,private backgroundGeolocation: BackgroundGeolocation,
+        private backgroundMode: BackgroundMode, private zone: NgZone) {
     this.directionsService = new google.maps.DirectionsService();
     this.directionsDisplay =  new google.maps.DirectionsRenderer();
     this.bounds = new google.maps.LatLngBounds();
@@ -33,7 +40,24 @@ export class ViajePage {
   }
 
   ionViewDidLoad() {
+
     this.getCurrentPosition();
+
+    
+  }
+
+  presentToast(mensaje) {
+    let toast = this.toastCtrl.create({
+      message: mensaje,
+      duration: 3000,
+      position: 'top'
+    });
+  
+    toast.onDidDismiss(() => {
+      console.log('Dismissed toast');
+    });
+  
+    toast.present();
   }
 
   getCurrentPosition(){
@@ -46,11 +70,13 @@ export class ViajePage {
     })
   }
 
+ 
+
   showMap(lat,lng){
     let map: any;
     let panelEle: HTMLElement = document.getElementById('panel');
     const location = new google.maps.LatLng(lat,lng);
-
+    //const ubicacion = new google.maps.
     const options = {
       center: location,
       zoom: 15
@@ -68,7 +94,9 @@ export class ViajePage {
        this.addMarker(e.latLng,map,"desde click");
     });
 
-    this.calcuateRoute(location,map);
+    this.mapa = map;
+    this.gps = location;
+    //this.calcuateRoute(location,map);
     google.maps.event.addListenerOnce(map, "idle", () => {
       
     });
@@ -76,6 +104,12 @@ export class ViajePage {
   }
 
   addMarker(pos,map,titulo){
+    this.waypoints.push({
+      location: pos,
+      icon: "www/assets/imgs/logo.png",
+      stopover:true
+    });
+    
     return new google.maps.Marker({
       position: pos,
       map: map,
@@ -83,16 +117,18 @@ export class ViajePage {
     });
   }
 
-  calcuateRoute(location,map){
+  calcula(){
+    this.calcuateRoute(this.gps,this.mapa);
+  }
 
+  calcuateRoute(location,map){
+  
+    
     var request = {
       origin: location,
-      destination: "Xalisco, Nay",
+      destination: location,
       travelMode: 'DRIVING',
-      waypoints: [{
-        location: "Tepic, nay",
-              stopover: true
-      }],
+      waypoints: this.waypoints,
           optimizeWaypoints: true,
     };
     this.directionsService.route(request, (result, status) => {
@@ -101,6 +137,106 @@ export class ViajePage {
       }
     });
 
+  }
+
+  iniciar1(){
+  
+    this.backgroundMode.enable();
+    setInterval(()=>{
+      this.geolocation.getCurrentPosition()
+    .then(position => {
+        const pos = new google.maps.LatLng(position.coords.latitude,position.coords.longitude);
+        this.addMarker(pos,this.mapa,"titulo");
+        this.http.get('http://10.58.0.166:8080/pointsTravel/2',{
+          params:{
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          }
+        }).map(res => res.json()).subscribe(data => {
+            console.log("Se agrego correctamente");
+            this.presentToast("segundo plano correcto");
+        });
+    })
+    .catch(error=>{
+      this.presentToast(error);
+    })
+    
+    },10000);
+    
+  }
+
+  iniciar(){
+    let config = {
+      desiredAccuracy: 0,
+      stationaryRadius: 20,
+      distanceFilter: 10,
+      debug: false,
+      interval: 10000
+    };
+
+    this.backgroundMode.enable();
+   
+    this.backgroundGeolocation.configure(config).subscribe((location) => {
+      // Run update inside of Angular's zone
+    }, (err) => {
+      console.log(err);
+    });
+   
+    // Turn ON the background-geolocation system
+    this.backgroundGeolocation.start();
+
+    let options = {
+      frequency: 0,
+      timeout: 10000,
+      maximumAge:10000,
+      enableHighAccuracy: true
+    };
+    let i = 0;
+    let idviaje;
+   let watch = this.geolocation.watchPosition(options).subscribe((position: Geoposition) => {
+    
+    switch(i){
+      case 0:
+        this.http.get('http://192.168.0.14:8080/movil/app/newTravel/4',{
+          params:{
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          }
+        }).map(res => res.json()).subscribe(data => {
+           idviaje = data;
+        });
+        i = 1;
+        break;
+      case 1:
+        setTimeout(()=>{
+          i = 2;
+        },10000);
+        i =3;
+        break;
+      case 2:
+      this.zone.run(()=>{
+        const pos = new google.maps.LatLng(position.coords.latitude,position.coords.longitude);
+        this.addMarker(pos,this.mapa,"titulo");
+        this.presentToast(idviaje);
+       this.http.get('http://192.168.0.14:8080/movil/app/travelPoints/'+idviaje,{
+          params:{
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          }
+        }).map(res => res.json()).subscribe(data => {
+            
+        });
+        i = 1;
+      });
+      break;
+      default: 
+      //this.presentToast(i);
+       break;
+    }
+
+      // Run update inside of Angular's zone
+     
+    });
   }
 
 }
