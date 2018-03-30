@@ -1,42 +1,106 @@
 <ion-header>
 
   <ion-navbar>
-    <ion-title>{{ 'SIGNUP_TITLE' | translate }}</ion-title>
+    <ion-title>REGISTRO</ion-title>
   </ion-navbar>
 
 </ion-header>
 
 
 <ion-content>
-  <form (submit)="doSignup()">
+  <form id="algo">
+    <input type="hidden" name="_csrf" value=_csrf />
+      
     <ion-list>
 
       <ion-item>
-        <ion-label fixed>{{ 'NAME' | translate }}</ion-label>
-        <ion-input type="text" [(ngModel)]="account.name" name="name"></ion-input>
+        <ion-label floating>Nombre(s)</ion-label>
+        <ion-input type="text" [(ngModel)]="account.nombre" name="nombre"></ion-input>
       </ion-item>
 
       <ion-item>
-        <ion-label fixed>{{ 'EMAIL' | translate }}</ion-label>
-        <ion-input type="email" [(ngModel)]="account.email" name="email"></ion-input>
+        <ion-label floating>Apellido Paterno</ion-label>
+        <ion-input type="text" [(ngModel)]="account.ap_pat" name="ap_pat"></ion-input>
       </ion-item>
-
-      <!--
-      Want to add a Username? Here you go:
 
       <ion-item>
-        <ion-label floating>Username</ion-label>
-        <ion-input type="text" [(ngModel)]="account.username" name="username"></ion-input>
+        <ion-label floating>Apellido Materno</ion-label>
+        <ion-input type="text" [(ngModel)]="account.ap_mat" name="ap_mat"></ion-input>
       </ion-item>
-      -->
+      
+      <ion-item>
+        <ion-label floating>Estado</ion-label>
+        <ion-select (ionChange)="getMunicipios($event)">
+          <ion-option *ngFor="let item of estados" value="{{item['id']}}">{{item["DESC"]}}</ion-option>
+        </ion-select>
+      </ion-item>
+    
+      <ion-item>
+        <ion-label floating>Municipio</ion-label>
+        <ion-select (ionChange)="getColonias($event)">
+          <ion-option *ngFor="let item of municipios" value="{{item['id']}}">{{item["DESC"]}}</ion-option>
+        </ion-select>
+      </ion-item>
 
       <ion-item>
-        <ion-label fixed>{{ 'PASSWORD' | translate }}</ion-label>
-        <ion-input type="password" [(ngModel)]="account.password" name="password"></ion-input>
+        <ion-label floating>Colonia</ion-label>
+        <ion-select (ionChange)="selColonia($event)">
+          <ion-option *ngFor="let item of colonias" value="{{item['id']}}">{{item["DESC"]}}</ion-option>
+        </ion-select>
       </ion-item>
 
+
+      <ion-item>
+        <ion-label floating>Calle</ion-label>
+        <ion-input type="text" [(ngModel)]="account.calle" name="calle"></ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-label floating>Numero</ion-label>
+        <ion-input type="number" [(ngModel)]="account.numero" name="numero"></ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-label floating>Codigo Postal</ion-label>
+        <ion-input type="number" [(ngModel)]="account.cp" name="cp"></ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-label floating>Correo</ion-label>
+        <ion-input type="mail" [(ngModel)]="account.correo" name="correo"></ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-label floating>Telefono Celular</ion-label>
+        <ion-input type="number" [(ngModel)]="account.tel_cel" name="tel_cel"></ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-label floating>Telefono Fijo</ion-label>
+        <ion-input type="number" [(ngModel)]="account.tel_fij" name="tel_fij"></ion-input>
+      </ion-item>
+        <br>
+      <ion-item>
+        <ion-label fixed>Fecha de Nacimiento</ion-label>
+        <ion-input type="date" [(ngModel)]="account.fecha" name="fecha"></ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-label floating>Usuario</ion-label>
+        <ion-input type="number" [(ngModel)]="account.tel_cel" disabled name="user"></ion-input>
+      </ion-item>
+     
+      <ion-item>
+        <ion-label floating>Contraseña</ion-label>
+        <ion-input type="password" [(ngModel)]="account.pass" name="pass"></ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-label floating>Confirmar</ion-label>
+        <ion-input type="password" [(ngModel)]="account.passconfirm" name="pafConfirm"></ion-input>
+      </ion-item>
       <div padding>
-        <button ion-button color="primary" block>{{ 'SIGNUP_BUTTON' | translate }}</button>
+        <button ion-button color="primary" block (click)="registrar()">REGISTRAR</button>
       </div>
 
     </ion-list>

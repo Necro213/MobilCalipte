@@ -1,23 +1,17 @@
 import { NgModule } from '@angular/core';
-import { TranslateModule } from '@ngx-translate/core';
 import { IonicPageModule } from 'ionic-angular';
+import { SeguimientoPage } from './seguimiento';
 import { HttpClientModule } from '@angular/common/http';
 import { HttpModule } from '@angular/http';
 
-import { SignupPage } from './signup';
-
 @NgModule({
   declarations: [
-    SignupPage,
+    SeguimientoPage,
   ],
   imports: [
     HttpClientModule,
     HttpModule,
-    IonicPageModule.forChild(SignupPage),
-    TranslateModule.forChild()
+    IonicPageModule.forChild(SeguimientoPage),
   ],
-  exports: [
-    SignupPage
-  ]
 })
-export class SignupPageModule { }
+export class SeguimientoPageModule {}

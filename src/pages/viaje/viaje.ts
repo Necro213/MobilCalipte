@@ -3,6 +3,7 @@ import { IonicPage, NavController, NavParams,ToastController } from 'ionic-angul
 import { BackgroundGeolocation } from '@ionic-native/background-geolocation';
 import { Geolocation, Geoposition } from '@ionic-native/geolocation';
 import { Http } from '@angular/http';
+import { Storage } from '@ionic/storage';
 //import { Toast } from 'ionic-angular/components/toast/toast';
 import { BackgroundMode } from '@ionic-native/background-mode';
 
@@ -29,10 +30,20 @@ export class ViajePage {
   waypoints: any = [];
   mapa: any;
   gps: any;
+  busqueda: any;
+  actViaje: boolean;
+  watch: any;
+  endRoute: any;
+  idUsuario: number;
 
   constructor(public navCtrl: NavController, public navParams: NavParams, private geolocation: Geolocation,
         private http: Http,private toastCtrl: ToastController,private backgroundGeolocation: BackgroundGeolocation,
-        private backgroundMode: BackgroundMode, private zone: NgZone) {
+        private backgroundMode: BackgroundMode, private zone: NgZone,public storage:Storage) {
+
+          this.storage.get('id').then((val) => {
+            this.idUsuario=val;
+          });
+
     this.directionsService = new google.maps.DirectionsService();
     this.directionsDisplay =  new google.maps.DirectionsRenderer();
     this.bounds = new google.maps.LatLngBounds();
@@ -70,13 +81,15 @@ export class ViajePage {
     })
   }
 
- 
+  //--------------------------------------------------------------------------------------------
+
+    //--------------------------------------------------------------------------------------------
 
   showMap(lat,lng){
     let map: any;
     let panelEle: HTMLElement = document.getElementById('panel');
     const location = new google.maps.LatLng(lat,lng);
-    //const ubicacion = new google.maps.
+
     const options = {
       center: location,
       zoom: 15
@@ -100,15 +113,26 @@ export class ViajePage {
     google.maps.event.addListenerOnce(map, "idle", () => {
       
     });
-    
+   
+  }
+
+  newPosition(){
+    var geocode = new google.maps.Geocoder();
+    let map = this.mapa;
+    geocode.geocode({ 'address': this.busqueda},function(results, status){
+      if(status == 'OK'){
+         map.setCenter(results[0].geometry.location);
+      }
+  });
   }
 
   addMarker(pos,map,titulo){
     this.waypoints.push({
       location: pos,
-      icon: "www/assets/imgs/logo.png",
       stopover:true
     });
+
+    this.endRoute = pos;
     
     return new google.maps.Marker({
       position: pos,
@@ -126,7 +150,7 @@ export class ViajePage {
     
     var request = {
       origin: location,
-      destination: location,
+      destination: this.endRoute,
       travelMode: 'DRIVING',
       waypoints: this.waypoints,
           optimizeWaypoints: true,
@@ -139,104 +163,86 @@ export class ViajePage {
 
   }
 
-  iniciar1(){
-  
-    this.backgroundMode.enable();
-    setInterval(()=>{
-      this.geolocation.getCurrentPosition()
-    .then(position => {
-        const pos = new google.maps.LatLng(position.coords.latitude,position.coords.longitude);
-        this.addMarker(pos,this.mapa,"titulo");
-        this.http.get('http://10.58.0.166:8080/pointsTravel/2',{
-          params:{
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          }
-        }).map(res => res.json()).subscribe(data => {
-            console.log("Se agrego correctamente");
-            this.presentToast("segundo plano correcto");
-        });
-    })
-    .catch(error=>{
-      this.presentToast(error);
-    })
-    
-    },10000);
-    
-  }
 
   iniciar(){
-    let config = {
-      desiredAccuracy: 0,
-      stationaryRadius: 20,
-      distanceFilter: 10,
-      debug: false,
-      interval: 10000
-    };
-
-    this.backgroundMode.enable();
-   
-    this.backgroundGeolocation.configure(config).subscribe((location) => {
-      // Run update inside of Angular's zone
-    }, (err) => {
-      console.log(err);
-    });
-   
-    // Turn ON the background-geolocation system
-    this.backgroundGeolocation.start();
-
-    let options = {
-      frequency: 0,
-      timeout: 10000,
-      maximumAge:10000,
-      enableHighAccuracy: true
-    };
-    let i = 0;
-    let idviaje;
-   let watch = this.geolocation.watchPosition(options).subscribe((position: Geoposition) => {
-    
-    switch(i){
-      case 0:
-        this.http.get('http://192.168.0.14:8080/movil/app/newTravel/4',{
-          params:{
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          }
-        }).map(res => res.json()).subscribe(data => {
-           idviaje = data;
-        });
-        i = 1;
-        break;
-      case 1:
-        setTimeout(()=>{
-          i = 2;
-        },10000);
-        i =3;
-        break;
-      case 2:
-      this.zone.run(()=>{
-        const pos = new google.maps.LatLng(position.coords.latitude,position.coords.longitude);
-        this.addMarker(pos,this.mapa,"titulo");
-        this.presentToast(idviaje);
-       this.http.get('http://192.168.0.14:8080/movil/app/travelPoints/'+idviaje,{
-          params:{
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          }
-        }).map(res => res.json()).subscribe(data => {
-            
-        });
-        i = 1;
-      });
-      break;
-      default: 
-      //this.presentToast(i);
-       break;
-    }
-
-      // Run update inside of Angular's zone
+   // this.presentToast(this.actViaje);
+    if(this.actViaje == true){
+      let config = {
+        desiredAccuracy: 0,
+        stationaryRadius: 20,
+        distanceFilter: 10,
+        debug: false,
+        interval: 10000
+      };
+  
+      this.backgroundMode.enable();
      
-    });
+      this.backgroundGeolocation.configure(config).subscribe((location) => {
+        // Run update inside of Angular's zone
+      }, (err) => {
+        this.presentToast(err);
+      });
+     
+      // Turn ON the background-geolocation system
+      this.backgroundGeolocation.start();
+  
+      let options = {
+        frequency: 0,
+        timeout: 10000,
+        maximumAge:10000,
+        enableHighAccuracy: true
+      };
+      let i = 0;
+      let idviaje;
+      this.watch = this.geolocation.watchPosition(options).subscribe((position: Geoposition) => {
+      
+      switch(i){
+        case 0:
+          this.http.get('http://177.242.21.51:8888/movil/app/newTravel/'+this.idUsuario,{
+            params:{
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            }
+          }).map(res => res.json()).subscribe(data => {
+             idviaje = data;
+            //this.presentToast(idviaje);
+          });
+          i = 1;
+          break;
+        case 1:
+          setTimeout(()=>{
+            i = 2;
+          },10000);
+          i =3;
+          break;
+        case 2:
+        this.zone.run(()=>{
+          const pos = new google.maps.LatLng(position.coords.latitude,position.coords.longitude);
+          this.addMarker(pos,this.mapa,"titulo");
+          this.presentToast(idviaje);
+         this.http.get('http://177.242.21.51:8888/movil/app/travelPoints/'+idviaje,{
+            params:{
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            }
+          }).map(res => res.json()).subscribe(data => {
+              
+          });
+          i = 1;
+        });
+        break;
+        default: 
+        //this.presentToast(i);
+         break;
+      }
+  
+        // Run update inside of Angular's zone
+       
+      });
+    }else{
+      this.watch.unsubscribe;
+    }
+    
   }
 
 }
